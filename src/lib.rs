@@ -1,5 +1,3 @@
-use clap::Parser;
-
 pub fn compute_melting_temperature(nucleotide_concentration: f64, enthalpy: f64, entropy: f64) -> f64 {
     let tm = enthalpy / (entropy + 1.99 * (nucleotide_concentration/ 4.0).ln()) - 273.15;
     tm
@@ -110,24 +108,4 @@ pub fn compute_entropy_1mna(entropy: f64, pos1: i32, pos2: i32) -> f64 {
     let correction_constant: f64 = 0.1;
     let entropy_1mna: f64 = entropy - 0.368 * (pos2 - pos1).abs() as f64 * correction_constant.ln();
     entropy_1mna
-}
-
-#[derive(Parser, Debug)]
-#[command(author="Austin Crinklaw", version = "0.1.0", about = "Compute melting temperature of mRNA/RNA duplexes")]
-struct Args {
-    // Input sequence
-    #[arg(short, long)]
-    sequence: String,
-    // Sodium concentration
-    #[arg(short, long)]
-    na_conc: f64,
-    // dNTP concentration
-    #[arg(short, long)]
-    rna_conc: f64,
-}
-
-fn main() {
-    let args = Args::parse();
-    let tm = compute_thermodynamics(&args.sequence, args.rna_conc, args.na_conc);
-    println!("Melting temperature: {:.2}°C", tm);
 }
