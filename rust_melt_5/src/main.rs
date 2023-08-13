@@ -1,10 +1,11 @@
+use clap::Parser;
 
-fn compute_melting_temperature(nucleotide_concentration: f64, enthalpy: f64, entropy: f64) -> f64 {
+pub fn compute_melting_temperature(nucleotide_concentration: f64, enthalpy: f64, entropy: f64) -> f64 {
     let tm = enthalpy / (entropy + 1.99 * (nucleotide_concentration/ 4.0).ln()) - 273.15;
     tm
 }
 
-fn count_terminal_au(sequence: &str) -> u8 {
+pub fn count_terminal_au(sequence: &str) -> u8 {
     if sequence.is_empty() {
         return 0;
     }
@@ -23,14 +24,14 @@ fn count_terminal_au(sequence: &str) -> u8 {
     count
 }
 
-fn calculate_terminal_au_penalty(sequence: &str) -> (f64, f64) {
+pub fn calculate_terminal_au_penalty(sequence: &str) -> (f64, f64) {
     let count = count_terminal_au(sequence);
     let enthalpy_penalty: f64 = 3140.0;
     let entropy_penalty: f64 = 9.1;
     (enthalpy_penalty * count as f64, entropy_penalty * count as f64)
 }
 
-fn calculate_delta_s(na: f64, duplex_length: usize) -> f64 {
+pub fn calculate_delta_s(na: f64, duplex_length: usize) -> f64 {
     let square: f64 = na.ln() * na.ln();
     let a: f64 = -0.075 * na.ln() + 0.012 * square;
     let b: f64 = 0.018 * square;
@@ -38,7 +39,7 @@ fn calculate_delta_s(na: f64, duplex_length: usize) -> f64 {
     g
 }
 
-fn get_enthalpy(pair: &str) -> f64 {
+pub fn get_enthalpy(pair: &str) -> f64 {
     match pair {
         "AA" => -7480.0,
         "AC" => -6320.0,
@@ -61,7 +62,7 @@ fn get_enthalpy(pair: &str) -> f64 {
 
 }
 
-fn get_entropy(pair: &str) -> f64{
+pub fn get_entropy(pair: &str) -> f64{
     match pair {
         "AA" => -22.3,
         "AC" => -15.2,
@@ -83,22 +84,7 @@ fn get_entropy(pair: &str) -> f64{
     }
 }
 
-fn get_complementary_sequence(sequence: &str) -> String {
-    let mut complementary_sequence = String::with_capacity(sequence.len());
-
-    for (i, c) in sequence.chars().enumerate() {
-        match c {
-            'A' => complementary_sequence.push('U'),
-            'C' => complementary_sequence.push('G'),
-            'G' => complementary_sequence.push('C'),
-            'U' => complementary_sequence.push('A'),
-            _ => panic!("Invalid character {} at position {}", c, i),
-        }
-    }
-    complementary_sequence
-}
-
-fn compute_thermodynamics(sequence: &str, nucleotide_concentration: f64, na_concentration: f64) -> f64{
+pub fn compute_thermodynamics(sequence: &str, nucleotide_concentration: f64, na_concentration: f64) -> f64{
     //initial values for turner2006 mrna/rna
     let mut enthalpy: f64 = 0.0;
     let mut entropy: f64 = 0.0;
@@ -107,7 +93,7 @@ fn compute_thermodynamics(sequence: &str, nucleotide_concentration: f64, na_conc
         enthalpy += get_enthalpy(pair);
         entropy += get_entropy(pair);
     }
-    entropy = compute_entropy_1MNa(entropy, 0, sequence.len() as i32 - 1);
+    entropy = compute_entropy_1mna(entropy, 0, sequence.len() as i32 - 1);
     let entropy_correction: f64 = -3.22 * ((sequence.len() as f64 - 1.0) * calculate_delta_s(na_concentration, sequence.len()));
     entropy += entropy_correction;
     let (enthalpy_penalty, entropy_penalty) = calculate_terminal_au_penalty(sequence);
@@ -118,14 +104,30 @@ fn compute_thermodynamics(sequence: &str, nucleotide_concentration: f64, na_conc
     tm
 }
 
-fn compute_entropy_1MNa(entropy: f64, pos1: i32, pos2: i32) -> f64 {
-    // Returns the entropy value in 1M Na from initial entropy value in 0.1M Na using sodium correction
+pub fn compute_entropy_1mna(entropy: f64, pos1: i32, pos2: i32) -> f64 {
+    // Returns the entropy value in 1M [Na+] from initial entropy value in 0.1M Na using sodium correction
     // from Santa Lucia 2004
     let correction_constant: f64 = 0.1;
-    let entropy_1MNa: f64 = entropy - 0.368 * (pos2 - pos1).abs() as f64 * correction_constant.ln();
-    entropy_1MNa
+    let entropy_1mna: f64 = entropy - 0.368 * (pos2 - pos1).abs() as f64 * correction_constant.ln();
+    entropy_1mna
+}
+
+#[derive(Parser, Debug)]
+#[command(author="Austin Crinklaw", version = "0.1.0", about = "Compute melting temperature of mRNA/RNA duplexes")]
+struct Args {
+    // Input sequence
+    #[arg(short, long)]
+    sequence: String,
+    // Sodium concentration
+    #[arg(short, long)]
+    na_conc: f64,
+    // dNTP concentration
+    #[arg(short, long)]
+    rna_conc: f64,
 }
 
 fn main() {
-    println!("melting temperature: {}", compute_thermodynamics("GAGUCAA", 2e-6, 1.0));
+    let args = Args::parse();
+    let tm = compute_thermodynamics(&args.sequence, args.rna_conc, args.na_conc);
+    println!("Melting temperature: {:.2}°C", tm);
 }
