@@ -1,3 +1,57 @@
+pub enum NucleotidePair {
+    AA, AC, AG, AU, UU, UG, UC, UA, CC, CA, CG, CU, GA, GG, GC, GU
+}
+
+pub struct ThermoProperties {
+    enthalpy: f64,
+    entropy: f64,
+}
+
+impl ThermoProperties {
+    fn from_pair(pair: &NucleotidePair) -> ThermoProperties {
+        match pair {
+            NucleotidePair::AA => ThermoProperties { enthalpy: -7480.0, entropy: -22.3 },
+            NucleotidePair::AC => ThermoProperties { enthalpy: -6320.0, entropy: -15.2 },
+            NucleotidePair::AG => ThermoProperties { enthalpy: -13940.0, entropy: -39.1 },
+            NucleotidePair::AU => ThermoProperties { enthalpy: -6330.0, entropy: -17.7 },
+            NucleotidePair::UU => ThermoProperties { enthalpy: -5430.0, entropy: -14.5 },
+            NucleotidePair::UG => ThermoProperties { enthalpy: -12140.0, entropy: -32.9 },
+            NucleotidePair::UC => ThermoProperties { enthalpy: -9650.0, entropy: -25.0 },
+            NucleotidePair::UA => ThermoProperties { enthalpy: -6470.0, entropy: -17.0 },
+            NucleotidePair::CC => ThermoProperties { enthalpy: -8880.0, entropy: -19.7 },
+            NucleotidePair::CA => ThermoProperties { enthalpy: -5210.0, entropy: -10.7 },
+            NucleotidePair::CG => ThermoProperties { enthalpy: -9470.0, entropy: -23.0 },
+            NucleotidePair::CU => ThermoProperties { enthalpy: -9590.0, entropy: -23.89 },
+            NucleotidePair::GA => ThermoProperties { enthalpy: -5770.0, entropy: -11.9 },
+            NucleotidePair::GG => ThermoProperties { enthalpy: -9660.0, entropy: -22.1 },
+            NucleotidePair::GC => ThermoProperties { enthalpy: -11900.0, entropy: -26.3 },
+            NucleotidePair::GU => ThermoProperties { enthalpy: -6620.0, entropy: -14.3 },
+        }
+    }
+}
+
+pub fn nucleotide_pair_from_str(pair: &str) -> NucleotidePair {
+    match pair {
+        "AA" => NucleotidePair::AA,
+        "AC" => NucleotidePair::AC,
+        "AG" => NucleotidePair::AG,
+        "AU" => NucleotidePair::AU,
+        "UU" => NucleotidePair::UU,
+        "UG" => NucleotidePair::UG,
+        "UC" => NucleotidePair::UC,
+        "UA" => NucleotidePair::UA,
+        "CC" => NucleotidePair::CC,
+        "CA" => NucleotidePair::CA,
+        "CG" => NucleotidePair::CG,
+        "CU" => NucleotidePair::CU,
+        "GA" => NucleotidePair::GA,
+        "GG" => NucleotidePair::GG,
+        "GC" => NucleotidePair::GC,
+        "GU" => NucleotidePair::GU,
+        _ => panic!("Invalid pair {}", pair),
+    }
+}
+
 pub fn compute_melting_temperature(nucleotide_concentration: f64, enthalpy: f64, entropy: f64) -> f64 {
     let tm = enthalpy / (entropy + 1.99 * (nucleotide_concentration/ 4.0).ln()) - 273.15;
     tm
@@ -37,59 +91,15 @@ pub fn calculate_delta_s(na: f64, duplex_length: usize) -> f64 {
     g
 }
 
-pub fn get_enthalpy(pair: &str) -> f64 {
-    match pair {
-        "AA" => -7480.0,
-        "AC" => -6320.0,
-        "AG" => -13940.0,
-        "AU" => -6330.0,
-        "UU" => -5430.0,
-        "UG" => -12140.0,
-        "UC" => -9650.0,
-        "UA" => -6470.0,
-        "CC" => -8880.0,
-        "CA" => -5210.0,
-        "CG" => -9470.0,
-        "CU" => -9590.0,
-        "GA" => -5770.0,
-        "GG" => -9660.0,
-        "GC" => -11900.0,
-        "GU" => -6620.0,
-        _ => panic!("Invalid pair {}", pair),
-    }
-
-}
-
-pub fn get_entropy(pair: &str) -> f64{
-    match pair {
-        "AA" => -22.3,
-        "AC" => -15.2,
-        "AG" => -39.1,
-        "AU" => -17.7,
-        "UU" => -14.5,
-        "UG" => -32.9,
-        "UC" => -25.0,
-        "UA" => -17.0,
-        "CC" => -19.7,
-        "CA" => -10.7,
-        "CG" => -23.0,
-        "CU" => -23.89,
-        "GA" => -11.9,
-        "GG" => -22.1,
-        "GC" => -26.3,
-        "GU" => -14.3,
-        _ => panic!("Invalid pair {}", pair),
-    }
-}
-
 pub fn compute_thermodynamics(sequence: &str, nucleotide_concentration: f64, na_concentration: f64) -> f64{
     //initial values for turner2006 mrna/rna
     let mut enthalpy: f64 = 0.0;
     let mut entropy: f64 = 0.0;
     for i in 0..sequence.len() - 1 {
-        let pair = &sequence[i..i+2];
-        enthalpy += get_enthalpy(pair);
-        entropy += get_entropy(pair);
+        let pair_str = &sequence[i..i+2];
+        let pair = nucleotide_pair_from_str(pair_str);
+        enthalpy += ThermoProperties::from_pair(&pair).enthalpy;
+        entropy += ThermoProperties::from_pair(&pair).entropy;
     }
     entropy = compute_entropy_1mna(entropy, 0, sequence.len() as i32 - 1);
     let entropy_correction: f64 = -3.22 * ((sequence.len() as f64 - 1.0) * calculate_delta_s(na_concentration, sequence.len()));
