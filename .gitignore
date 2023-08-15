@@ -1,8 +1,11 @@
+# output folders
 debug/
 target/
 
 Cargo.lock
 
 **/*.rs.bk
-
 *.pdb
+
+# original source code of Java project
+MELTING*/
